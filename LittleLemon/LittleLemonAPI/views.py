@@ -9,10 +9,10 @@ from rest_framework.decorators import api_view
 @api_view(['GET', 'POST', 'PUT', 'DELETE'])
 def menu_items(request):
     if request.method == 'GET':
-        return Response('Menu Items', status=status.HTTP_200_OK)
+        return Response('Fetch All Menu Items', status=status.HTTP_200_OK)
     if request.method == 'POST':
-        return Response('Menu Items', status=status.HTTP_201_CREATED)
+        return Response('Menu Item Posted Successfully', status=status.HTTP_201_CREATED)
     if request.method == 'PUT':
-        return Response('Menu Items', status=status.HTTP_200_OK)
+        return Response('Menu Item has been Updated', status=status.HTTP_200_OK)
     if request.method == 'DELETE':
-        return Response('Menu Items', status=status.HTTP_204_NO_CONTENT)
+        return Response('Menu Item has been Deleted', status=status.HTTP_204_NO_CONTENT)
