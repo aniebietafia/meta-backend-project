@@ -1,52 +1,64 @@
 from rest_framework import serializers
-from .models import MenuItem, Category, Order, OrderItem
+from django.contrib.auth.models import User
+from decimal import Decimal
+
+from .models import Category, MenuItem, Cart, Order, OrderItem
 
 
-class CategorySerializer(serializers.ModelSerializer):
+class CategorySerializer (serializers.ModelSerializer):
     class Meta:
         model = Category
-        fields = ['id', 'slug', 'title']
+        fields = ['id', 'title', 'slug']
 
 
 class MenuItemSerializer(serializers.ModelSerializer):
-    category = CategorySerializer(read_only=True)
+    category = serializers.PrimaryKeyRelatedField(
+        queryset=Category.objects.all()
+    )
+    # category = CategorySerializer(read_only=True)
 
     class Meta:
         model = MenuItem
-        fields = ['id', 'title', 'price', 'featured', 'category']
+        fields = ['id', 'title', 'price', 'category', 'featured']
 
 
-class CartSerializer(serializers.Serializer):
-    menuitem = serializers.PrimaryKeyRelatedField(
-        queryset=MenuItem.objects.all())
-    quantity = serializers.IntegerField()
-    unit_price = serializers.DecimalField(
-        max_digits=6, decimal_places=2, read_only=True)
-    price = serializers.DecimalField(
-        max_digits=6, decimal_places=2, read_only=True)
+class CartSerializer(serializers.ModelSerializer):
+    user = serializers.PrimaryKeyRelatedField(
+        queryset=User.objects.all(),
+        default=serializers.CurrentUserDefault()
+    )
 
-    def validate(self, data):
-        if data['quantity'] < 1:
-            raise serializers.ValidationError(
-                'Quantity must be greater than or equal to 1')
-        return data
+    def validate(self, attrs):
+        attrs['price'] = attrs['quantity'] * attrs['unit_price']
+        return attrs
+
+    class Meta:
+        model = Cart
+        fields = ['user', 'menuitem', 'unit_price', 'quantity', 'price']
+        extra_kwargs = {
+            'price': {'read_only': True}
+        }
 
 
 class OrderItemSerializer(serializers.ModelSerializer):
     class Meta:
-        model = MenuItem
-        fields = ['id', 'title', 'price']
+        model = OrderItem
+        fields = ['order', 'menuitem', 'quantity', 'price']
 
 
-class OrderSerializer(serializers.Serializer):
-    items = OrderItemSerializer(many=True)
-    total = serializers.DecimalField(
-        max_digits=6, decimal_places=2, read_only=True)
-    date = serializers.DateField()
+class OrderSerializer(serializers.ModelSerializer):
 
-    def create(self, validated_data):
-        items = validated_data.pop('items')
-        order = Order.objects.create(**validated_data)
-        for item in items:
-            OrderItem.objects.create(order=order, **item)
-        return order
+    orderitem = OrderItemSerializer(many=True, read_only=True, source='order')
+
+    class Meta:
+        model = Order
+        fields = ['id', 'user', 'delivery_crew',
+                  'status', 'date', 'total', 'orderitem']
+
+
+class UserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'email']
+
+
